@@ -1,7 +1,9 @@
 const pg = require('pg');
 const connectionString = process.env.DATABASE_URL;
 console.log('connection string', connectionString)
-const pool = new pg.Pool({connectionString: connectionString});
+const pool = new pg.Pool({connectionString: connectionString,ssl:{
+    rejectUnauthorized:false,
+}});
 
 async function createUpload(mimetype, size, filename) {
     const result = await pool.query('INSERT INTO uploads (mimetype, size, filename) VALUES ($1, $2, $3) RETURNING id', [mimetype, size, filename]);

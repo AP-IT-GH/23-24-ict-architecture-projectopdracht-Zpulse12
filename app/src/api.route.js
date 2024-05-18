@@ -4,7 +4,7 @@ const upload = multer({dest: '../files/'}).single('file');
 const {createUpload, getUpload, getUploads, deleteUpload} = require('./postgres');
 //const {createUpload, getUpload, getUploads, deleteUpload} = require('./in-memory');
 const {uploadToS3, downloadFromS3} = require('./s3');
-
+const {sendMessage} = require('./sqs');
 const router = Router();
 
 router.get('/', (req, res) => {
@@ -18,6 +18,7 @@ router.post('/uploads', upload, async (req, res) => {
     const {id} = await createUpload(mimetype, size, filename);
 
     await uploadToS3(req.file.path, id.toString());
+    await sendMessage({id});
     res.json({id});
 });
 
