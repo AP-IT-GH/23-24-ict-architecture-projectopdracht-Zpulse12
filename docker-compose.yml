@@ -1,0 +1,24 @@
+version: '3.8'
+services:
+  app:
+    image: app
+    restart: unless-stopped
+    ports:
+      - "80:3000"
+    environment:
+      - BUCKET=${BUCKET}
+      - REGION=${REGION}
+      - DATABASE_URL=${DATABASE_URL}
+      - QUEUE_URL=${QUEUE_URL}
+    volumes:
+      - /home/ec2-user/.aws/credentials:/root/.aws/credentials:ro
+     
+  img-resize:
+    image: img-resize
+    restart: unless-stopped
+    environment:
+      - BUCKET=${BUCKET}
+      - REGION=${REGION}
+      - QUEUE_URL=${QUEUE_URL}
+    volumes:
+      - /home/ec2-user/.aws/credentials:/root/.aws/credentials:ro
