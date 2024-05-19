@@ -5,8 +5,21 @@ const { processVideo } = require('./video');
 const putMetricData = require('./monitoring');
 
 const region = process.env.REGION;
-const sqsClient = new SQSClient({ region });
 const queueUrl = process.env.QUEUE_URL;
+
+if (!queueUrl || !region) {
+  logger.error("Queue URL or Region not defined in environment variables.");
+  process.exit(1);
+}
+
+const sqsClient = new SQSClient({
+  region,
+  credentials: process.env.ACCESS_KEY_ID ? {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    sessionToken: process.env.SESSION_TOKEN
+  } : undefined,
+});
 
 async function pollMessages() {
   const params = {
@@ -24,29 +37,34 @@ async function pollMessages() {
         const sizes = 'large,medium,640x360';
         const obj = JSON.parse(message.Body);
 
-        if (obj.type === 'image') {
-          logger.info(`Processing image message: ${message.MessageId}`);
-          await resizeImage(obj.id.toString(), sizes);
-          logger.debug(`Resized image for message: ${message.MessageId}`);
-        } else if (obj.type === 'video') {
-          logger.info(`Processing video message: ${message.MessageId}`);
-          await processVideo(obj.id.toString(), obj.watermarkId.toString());
-          logger.debug(`Processed video for message: ${message.MessageId}`);
-        }
+        try {
+          if (obj.type === 'image') {
+            logger.info(`Processing image message: ${message.MessageId}`);
+            await resizeImage(obj.id.toString(), sizes);
+            logger.debug(`Resized image for message: ${message.MessageId}`);
+          } else if (obj.type === 'video') {
+            logger.info(`Processing video message: ${message.MessageId}`);
+            await processVideo(obj.id.toString(), obj.watermarkId.toString());
+            logger.debug(`Processed video for message: ${message.MessageId}`);
+          }
 
-        const deleteParams = {
-          QueueUrl: queueUrl,
-          ReceiptHandle: message.ReceiptHandle
-        };
-        await sqsClient.send(new DeleteMessageCommand(deleteParams));
-        logger.info(`Deleted message from queue: ${message.MessageId}`);
-        putMetricData('ProcessedMessages', 1); // Log metric to CloudWatch
+          const deleteParams = {
+            QueueUrl: queueUrl,
+            ReceiptHandle: message.ReceiptHandle
+          };
+          await sqsClient.send(new DeleteMessageCommand(deleteParams));
+          logger.info(`Deleted message from queue: ${message.MessageId}`);
+          putMetricData('ProcessedMessages', 1); // Log metric to CloudWatch
+        } catch (processError) {
+          logger.error(`Error processing message ${message.MessageId}: ${processError}`);
+          putMetricData('ErrorCount', 1); // Log error metric to CloudWatch
+        }
       }
     } else {
-      logger.info("Geen nieuwe berichten beschikbaar.");
+      logger.info("No new messages available.");
     }
   } catch (err) {
-    logger.error(`Er is een fout opgetreden: ${err}`);
+    logger.error(`Error polling messages: ${err}`);
     putMetricData('ErrorCount', 1); // Log error metric to CloudWatch
   }
 }

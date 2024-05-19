@@ -1,4 +1,6 @@
 const AWS = require('aws-sdk');
+const logger = require('./logger');
+
 const cloudwatch = new AWS.CloudWatch({ region: process.env.REGION });
 
 function putMetricData(metricName, value) {
@@ -21,9 +23,9 @@ function putMetricData(metricName, value) {
 
   cloudwatch.putMetricData(params, (err, data) => {
     if (err) {
-      console.error('Error sending metric data to CloudWatch:', err);
+      logger.error('Error sending metric data to CloudWatch:', err);
     } else {
-      console.log('Successfully sent metric data to CloudWatch:', data);
+      logger.info('Successfully sent metric data to CloudWatch:', data);
     }
   });
 }
