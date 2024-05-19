@@ -46,7 +46,7 @@
     </section>
     <section class="container my-3">
         <h2>Laad nieuw bestand op</h2>
-        <form action="/api/uploads" method="POST" enctype="multipart/form-data">
+        <form id="uploadForm" enctype="multipart/form-data">
             <div class="my-2">
                 <input type="file" name="file" id="file" onchange="getFilename(event)" class="form-control">
                 <script>
@@ -131,6 +131,9 @@
 
                         table.appendChild(row);
                     });
+                })
+                .catch(error => {
+                    console.error('Error fetching uploads:', error);
                 });
         }
 
@@ -148,7 +151,7 @@
                     refreshData();
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Error deleting upload:', error);
                 });
             });
             return button;
@@ -172,7 +175,7 @@
 
         refreshData();
 
-        const form = document.querySelector('form');
+        const form = document.querySelector('form#uploadForm');
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             const formData = new FormData(form);
@@ -180,7 +183,12 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(result => {
                 document.getElementById('filename').value = '';
                 document.getElementById('file').value = '';
@@ -188,7 +196,7 @@
                 refreshData();
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('Error uploading file:', error);
             });
         });
     </script>
