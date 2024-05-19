@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    image: app
+    build: ./app
     restart: unless-stopped
     ports:
       - "80:3000"
@@ -14,7 +14,7 @@ services:
       - /home/ec2-user/.aws/credentials:/root/.aws/credentials:ro
      
   img-resize:
-    image: img-resize
+    build: ./img-resize
     restart: unless-stopped
     environment:
       - BUCKET=${BUCKET}
