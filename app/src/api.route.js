@@ -10,6 +10,9 @@ const router = Router();
 router.get('/', (req, res) => {
     res.json('Hello World!');
 });
+router.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 // Upload functionality for images. Use multer to handle the upload.
 router.post('/uploads', upload, async (req, res) => {
