@@ -92,6 +92,7 @@
                 </div>
                 <div class="modal-body">
                     <img style="width: 100%" id="img" alt="file image">
+                    <video style="width: 100%" id="video" controls></video>
                 </div>
             </div>
         </div>
@@ -163,11 +164,24 @@
             button.classList.add('btn', 'btn-primary');
             button.dataset.id = upload.id;
             button.dataset.filename = upload.filename;
+            button.dataset.mimetype = upload.mimetype;
             button.addEventListener('click', (e) => {
                 const modal = new bootstrap.Modal(document.getElementById('exampleModal'));
                 const img = document.getElementById('img');
-                img.src = `/api/file/${e.currentTarget.dataset.id}`;
-                img.alt = e.currentTarget.dataset.filename;
+                const video = document.getElementById('video');
+
+                const mimeType = e.currentTarget.dataset.mimetype;
+
+                if (mimeType.startsWith('image/')) {
+                    img.src = `/api/file/${e.currentTarget.dataset.id}`;
+                    img.style.display = 'block';
+                    video.style.display = 'none';
+                } else if (mimeType.startsWith('video/')) {
+                    video.src = `/api/file/${e.currentTarget.dataset.id}`;
+                    video.style.display = 'block';
+                    img.style.display = 'none';
+                }
+
                 modal.show();
             });
             return button;
