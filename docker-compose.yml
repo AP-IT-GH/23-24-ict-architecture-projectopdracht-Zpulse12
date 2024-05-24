@@ -22,3 +22,5 @@ services:
       - QUEUE_URL=${QUEUE_URL}
     volumes:
       - /home/ec2-user/.aws/credentials:/root/.aws/credentials:ro
+    depends_on:
+      - app
