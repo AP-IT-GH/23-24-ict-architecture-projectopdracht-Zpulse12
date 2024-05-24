@@ -1,7 +1,6 @@
 const logger = require('./logger');
-const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require("@aws-sdk/client-sqs");
+const { SQSClient, ReceiveMessageCommand, DeleteMessageCommand } = require('@aws-sdk/client-sqs');
 const { resizeImage } = require('./resize');
-const { processVideo } = require('./video');
 const putMetricData = require('./monitoring');
 
 const region = process.env.REGION;
@@ -29,6 +28,7 @@ async function pollMessages() {
   };
 
   try {
+    logger.info('Polling for messages...');
     const data = await sqsClient.send(new ReceiveMessageCommand(params));
     logger.debug(`Received data from SQS: ${JSON.stringify(data)}`);
     
@@ -42,10 +42,6 @@ async function pollMessages() {
             logger.info(`Processing image message: ${message.MessageId}`);
             await resizeImage(obj.id.toString(), sizes);
             logger.debug(`Resized image for message: ${message.MessageId}`);
-          } else if (obj.type === 'video') {
-            logger.info(`Processing video message: ${message.MessageId}`);
-            await processVideo(obj.id.toString(), obj.watermarkId.toString());
-            logger.debug(`Processed video for message: ${message.MessageId}`);
           }
 
           const deleteParams = {

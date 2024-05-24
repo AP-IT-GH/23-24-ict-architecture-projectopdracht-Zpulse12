@@ -1,9 +1,9 @@
-const AWS = require('aws-sdk');
+const { CloudWatchClient, PutMetricDataCommand } = require('@aws-sdk/client-cloudwatch');
 const logger = require('./logger');
 
-const cloudwatch = new AWS.CloudWatch({ region: process.env.REGION });
+const cloudwatchClient = new CloudWatchClient({ region: process.env.REGION });
 
-function putMetricData(metricName, value) {
+async function putMetricData(metricName, value) {
   const params = {
     MetricData: [
       {
@@ -21,13 +21,13 @@ function putMetricData(metricName, value) {
     Namespace: 'MyNamespace'
   };
 
-  cloudwatch.putMetricData(params, (err, data) => {
-    if (err) {
-      logger.error('Error sending metric data to CloudWatch:', err);
-    } else {
-      logger.info('Successfully sent metric data to CloudWatch:', data);
-    }
-  });
+  try {
+    logger.info(`Sending metric data to CloudWatch: ${metricName}, Value: ${value}`);
+    const data = await cloudwatchClient.send(new PutMetricDataCommand(params));
+    logger.info('Successfully sent metric data to CloudWatch:', data);
+  } catch (err) {
+    logger.error('Error sending metric data to CloudWatch:', err);
+  }
 }
 
 module.exports = putMetricData;
