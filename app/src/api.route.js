@@ -2,7 +2,6 @@ const { Router } = require('express');
 const multer = require('multer');
 const upload = multer({ dest: '../files/' }).single('file');
 const { createUpload, getUpload, getUploads, deleteUpload } = require('./postgres');
-// const {createUpload, getUpload, getUploads, deleteUpload} = require('./in-memory');
 const { uploadToS3, downloadFromS3 } = require('./s3');
 const { sendMessage } = require('./sqs');
 const router = Router();
@@ -10,19 +9,21 @@ const router = Router();
 router.get('/', (req, res) => {
     res.json('Hello World!');
 });
+
 router.get('/health', (req, res) => {
     res.status(200).send('OK');
 });
 
-// Upload functionality for images. Use multer to handle the upload.
 router.post('/uploads', upload, async (req, res) => {
     try {
         const { filename } = req.body;
         const { mimetype, size } = req.file;
         const { id } = await createUpload(mimetype, size, filename);
 
-        await uploadToS3(req.file.path, id.toString());
-        await sendMessage({ id });
+        const type = mimetype.startsWith('image/') ? 'image' : 'video';
+        
+        await uploadToS3(req.file.path, id.toString(), mimetype);
+        await sendMessage({ id, type });
         res.json({ id });
     } catch (error) {
         console.error('Error uploading file:', error);
@@ -67,10 +68,10 @@ router.get('/file/:id', async (req, res) => {
             return res.status(404).json({ message: 'File not found' });
         }
 
-        const body = await downloadFromS3(req.params.id);
+        const body = await downloadFromS3(req.params.id, `/tmp/${upload.filename}`);
         res.setHeader('Content-Type', upload.mimetype);
         res.setHeader('Content-Disposition', `inline; filename="${upload.filename}"`);
-        body.pipe(res);
+        res.sendFile(`/tmp/${upload.filename}`);
     } catch (error) {
         console.error('Error fetching file:', error);
         res.status(500).json({ message: 'Internal server error' });
