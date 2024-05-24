@@ -1,13 +1,9 @@
-const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
-const { readFileSync } = require('fs');
+const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/client-s3");
+const fs = require('fs');
+const path = require('path');
 
 const bucket = process.env.BUCKET;
 const region = process.env.REGION;
-
-if (!bucket || !region) {
-  console.error("Bucket or Region not defined in environment variables.");
-  process.exit(1);
-}
 
 const s3 = new S3Client({
   region,
@@ -18,11 +14,12 @@ const s3 = new S3Client({
   } : undefined,
 });
 
-async function uploadToS3(filePath, key) {
+async function uploadToS3(filePath, key, contentType) {
+  const fileContent = fs.readFileSync(filePath);
   const putObjectCommand = new PutObjectCommand({
-    Body: readFileSync(filePath),
+    Body: fileContent,
     Bucket: bucket,
-    ContentType: 'image/jpeg',
+    ContentType: contentType,
     Key: key,
   });
 
@@ -33,25 +30,30 @@ async function uploadToS3(filePath, key) {
     console.log('Successfully uploaded object to S3:', key);
   } catch (error) {
     console.error('Error uploading object to S3:', error);
-    throw error;  // Re-throw the error after logging
+    throw error;
   }
 }
 
-async function downloadFromS3(key) {
+async function downloadFromS3(key, downloadPath) {
   const getObjectCommand = new GetObjectCommand({
     Bucket: bucket,
     Key: key,
   });
 
   console.log('getting object from s3', bucket, key);
-  
+
   try {
     const { Body } = await s3.send(getObjectCommand);
+    const writeStream = fs.createWriteStream(downloadPath);
+    Body.pipe(writeStream);
+    await new Promise((resolve, reject) => {
+      writeStream.on('finish', resolve);
+      writeStream.on('error', reject);
+    });
     console.log('Successfully downloaded object from S3:', key);
-    return Body;
   } catch (error) {
     console.error('Error downloading object from S3:', error);
-    throw error;  // Re-throw the error after logging
+    throw error;
   }
 }
 
