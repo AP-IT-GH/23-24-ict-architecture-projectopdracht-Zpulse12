@@ -1,9 +1,12 @@
 const { Router } = require('express');
 const multer = require('multer');
 const upload = multer({ dest: '../files/' }).single('file');
-const { createUpload, getUpload, getUploads, deleteUpload } = require('./postgres');
+const { createUpload, getUploads, getUpload, deleteUpload, saveMetadata, getMetadata, getAllMetadata } = require('./postgres');
 const { uploadToS3, downloadFromS3 } = require('./s3');
 const { sendMessage } = require('./sqs');
+
+const bucket = process.env.BUCKET;
+
 const router = Router();
 
 router.get('/', (req, res) => {
@@ -24,6 +27,14 @@ router.post('/uploads', upload, async (req, res) => {
         
         await uploadToS3(req.file.path, id.toString(), mimetype);
         await sendMessage({ id, type });
+
+        // Simulate metadata extraction
+        const metadata = [
+            { key: 'Resolution', value: '1024x768' },
+            { key: 'Format', value: mimetype }
+        ];
+        await saveMetadata(id, metadata);
+
         res.json({ id });
     } catch (error) {
         console.error('Error uploading file:', error);
@@ -74,6 +85,26 @@ router.get('/file/:id', async (req, res) => {
         res.sendFile(`/tmp/${upload.filename}`);
     } catch (error) {
         console.error('Error fetching file:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/uploads/:id/metadata', async (req, res) => {
+    try {
+        const metadata = await getMetadata(req.params.id);
+        res.json(metadata);
+    } catch (error) {
+        console.error('Error fetching metadata:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+router.get('/meta', async (req, res) => {
+    try {
+        const metadata = await getAllMetadata();
+        res.json(metadata);
+    } catch (error) {
+        console.error('Error fetching all metadata:', error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
